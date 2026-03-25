@@ -210,6 +210,50 @@ def apply_fix(issue: SecurityIssue) -> bool:
                                     f'\\1 = "^{issue.fix}"', content)
                 Path("pyproject.toml").write_text(new_content)
                 return True
+        
+        elif issue.category == "code_vulnerability":
+            path = Path(issue.location)
+            if not path.exists():
+                return False
+            
+            content = path.read_text()
+            
+            if issue.description == "Potential sql injection in code":
+                content = content.replace("cursor.execute(f", "cursor.execute(")
+                content = re.sub(r'["\']SELECT.*?\.format\(', 'SELECT ...', content)
+            
+            elif issue.description == "Potential xss in code":
+                content = content.replace("innerHTML", "textContent")
+                content = content.replace("document.write", "document.createElement")
+            
+            elif issue.description == "Potential eval usage in code":
+                content = content.replace("eval(", "# eval removed: ")
+                content = content.replace("exec(", "# exec removed: ")
+            
+            elif issue.description == "Potential path traversal in code":
+                content = content.replace("os.path.join(request", "secure_path(request")
+            
+            elif issue.description == "Potential hardcoded db in code":
+                content = re.sub(r'(mysql|postgresql|mongodb)://[^:]+:[^@]+@', 
+                               'postgresql://${DB_USER}:${DB_PASSWORD}@', content)
+            
+            elif issue.description == "Potential insecure random in code":
+                content = content.replace("random.random", "random.getrandbits")
+                content = content.replace("random.randint", "secrets.randbelow")
+                content = "import secrets\n" + content if "import secrets" not in content else content
+            
+            elif issue.description == "Potential yaml load in code":
+                content = content.replace("yaml.load(", "yaml.safe_load(")
+                content = content.replace("Loader=None", "Loader=yaml.SafeLoader")
+                content = content.replace("Loader=yaml.FullLoader", "Loader=yaml.SafeLoader")
+            
+            elif issue.description == "Potential weak crypto in code":
+                content = content.replace("md5(", "hashlib.sha256(")
+                content = content.replace("sha1(", "hashlib.sha256(")
+            
+            path.write_text(content)
+            return True
+    
     except Exception as e:
         print(f"Fix failed: {e}")
     
