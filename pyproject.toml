@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pysec"
+version = "0.1.0"
+description = "Python Security Scanner"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "click>=8.0",
+    "rich>=13.0",
+]
+
+[project.scripts]
+pysec = "pysec.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["pysec*"]
