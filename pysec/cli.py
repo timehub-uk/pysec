@@ -1,6 +1,7 @@
 import click
 from rich.console import Console
 from pysec.scanner import Scanner
+from pysec.report import display_results, generate_json_report, generate_html_report
 
 console = Console()
 
@@ -15,7 +16,7 @@ def main():
 @main.command()
 @click.argument("path", default=".")
 @click.option("--output", "-o", type=click.Path(), help="Output report file")
-@click.option("--format", "-f", type=click.Choice(["text", "json"]), default="text", help="Report format")
+@click.option("--format", "-f", type=click.Choice(["text", "json", "html"]), default="text", help="Report format")
 @click.option("--severity", type=click.Choice(["critical", "high", "medium", "low"]), help="Filter by severity")
 def scan(path, output, format, severity):
     """Scan a project for security issues"""
@@ -28,14 +29,13 @@ def scan(path, output, format, severity):
         results = [r for r in results if r["severity"] == severity]
     
     if format == "json":
-        import json
-        output_data = json.dumps(results, indent=2)
-        if output:
-            with open(output, "w") as f:
-                f.write(output_data)
-        console.print(output_data)
+        generate_json_report(results, output)
+    elif format == "html":
+        generate_html_report(results, output)
     else:
-        display_results(results, output)
+        display_results(results)
+        if output:
+            console.print(f"[yellow]Note: Use --format json or html to save to file[/yellow]")
 
 
 @main.command()
@@ -53,36 +53,6 @@ def check(package):
             console.print(f"  - {vuln}")
     else:
         console.print("[bold green]✓ No known vulnerabilities[/bold green]")
-
-
-def display_results(results, output_file=None):
-    from rich.table import Table
-    from rich.panel import Panel
-    
-    if not results:
-        console.print(Panel.fit("[bold green]✓ No security issues found[/bold green]"))
-        return
-    
-    table = Table(title="Security Issues Found")
-    table.add_column("Severity", style="red")
-    table.add_column("Type", style="cyan")
-    table.add_column("Description")
-    table.add_column("Location")
-    
-    for r in results:
-        table.add_row(
-            r.get("severity", "unknown").upper(),
-            r.get("type", "unknown"),
-            r.get("description", "")[:50],
-            r.get("location", "")
-        )
-    
-    console.print(table)
-    
-    summary = f"Found {len(results)} issue(s)"
-    if output_file:
-        summary += f" (saved to {output_file})"
-    console.print(f"[bold]{summary}[/bold]")
 
 
 if __name__ == "__main__":
