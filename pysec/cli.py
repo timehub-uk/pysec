@@ -55,5 +55,20 @@ def check(package):
         console.print("[bold green]✓ No known vulnerabilities[/bold green]")
 
 
+@main.command()
+@click.option("--port", default=5000, help="Port to run dashboard")
+@click.option("--results-dir", default="scan-results", help="Directory for scan results")
+def serve(port, results_dir):
+    """Start the pysec dashboard web server"""
+    try:
+        from pysec.dashboard import app, RESULTS_DIR
+        import os
+        os.environ["RESULTS_DIR"] = results_dir
+        console.print(f"[bold green]Starting dashboard on http://localhost:{port}[/bold green]")
+        app.run(host="0.0.0.0", port=port)
+    except ImportError:
+        console.print("[bold red]Error: Flask not installed. Install with: pip install pysec[dashboard][/bold red]")
+
+
 if __name__ == "__main__":
     main()

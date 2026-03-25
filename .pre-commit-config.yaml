@@ -1,0 +1,23 @@
+repos:
+  - repo: local
+    hooks:
+      - id: pysec-scan
+        name: Security Scan
+        entry: python -m pysec.cli scan .
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit, push]
+        description: Run security scan on changed files
+
+  - repo: local
+    hooks:
+      - id: pysec-secrets
+        name: Secret Scan
+        entry: python -m pysec.cli scan . --severity critical
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+        description: Check for critical security issues
+        fail_fast: true

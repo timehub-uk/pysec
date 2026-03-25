@@ -1,0 +1,43 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master]
+  schedule:
+    - cron: '0 0 * * 0'
+  workflow_dispatch:
+
+jobs:
+  pysec-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install pysec
+        run: pip install pysec
+
+      - name: Run security scan
+        run: pysec scan . --format json --output pysec-results.json
+
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-scan-results
+          path: pysec-results.json
+          retention-days: 30
+
+      - name: Check for critical issues
+        run: |
+          total=$(cat pysec-results.json | python3 -c "import json,sys; d=json.load(sys.stdin); print(d['summary']['critical'] + d['summary']['high'])")
+          if [ "$total" -gt "0" ]; then
+            echo "::warning::Found $total critical or high severity issues"
+          fi

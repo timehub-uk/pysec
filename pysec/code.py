@@ -76,7 +76,7 @@ VULNERABILITY_PATTERNS = {
         "fix": "Remove or use proper validation"
     },
     "debug_enabled": {
-        "pattern": r"(DEBUG\s*=\s*True|debug\s*=\s*True)",
+        "pattern": r"(DEBUG|debug)\s*[=:]\s*(?!\s*os\.environ|os\.getenv|false|False|0)(True|true|1)",
         "severity": "medium",
         "description": "Debug mode may be enabled",
         "fix": "Disable in production"
