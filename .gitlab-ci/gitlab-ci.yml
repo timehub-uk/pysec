@@ -1,0 +1,26 @@
+image: python:3.11
+
+stages:
+  - security
+
+pysec:
+  stage: security
+  script:
+    - pip install pysec
+    - pysec scan . --format json --output pysec-report.json
+  artifacts:
+    when: always
+    paths:
+      - pysec-report.json
+    expire_in: 30 days
+  allow_failure: true
+
+bandit:
+  stage: security
+  script:
+    - pip install bandit
+    - bandit -r . -f json -o bandit-report.json || true
+  artifacts:
+    when: always
+    paths:
+      - bandit-report.json
