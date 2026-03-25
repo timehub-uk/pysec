@@ -176,26 +176,19 @@ def scan_code_vulnerabilities() -> list[SecurityIssue]:
 
 
 def research_issue(issue: SecurityIssue) -> list[str]:
-    references = []
+    refs = []
     
     if issue.cve_id:
-        search_query = f"{issue.cve_id} vulnerability fix"
-    else:
-        search_query = f"{issue.category} {issue.description} fix"
-    
-    result = run_command(f'exa --version 2>/dev/null && echo "has exa" || echo "no exa"')
-    
-    if issue.cve_id:
-        references.append(f"https://nvd.nist.gov/vuln/detail/{issue.cve_id}")
+        refs.append(f"https://nvd.nist.gov/vuln/detail/{issue.cve_id}")
     
     if "injection" in issue.category:
-        references.append("https://owasp.org/www-community/attacks/SQL_Injection")
+        refs.append("https://owasp.org/www-community/attacks/SQL_Injection")
     if "xss" in issue.category:
-        references.append("https://owasp.org/www-community/attacks/xss")
+        refs.append("https://owasp.org/www-community/attacks/xss")
     if "secret" in issue.category:
-        references.append("https://docs.github.com/en/code-security/secret-scanning")
+        refs.append("https://docs.github.com/en/code-security/secret-scanning")
     
-    return references
+    return refs
 
 
 def apply_fix(issue: SecurityIssue) -> bool:
@@ -217,68 +210,10 @@ def apply_fix(issue: SecurityIssue) -> bool:
                                     f'\\1 = "^{issue.fix}"', content)
                 Path("pyproject.toml").write_text(new_content)
                 return True
-        
-        elif issue.category == "secret_leak":
-            pass
-        
-        elif issue.category == "code_vulnerability":
-            pass
-    
     except Exception as e:
         print(f"Fix failed: {e}")
     
     return False
-
-
-def generate_report(issues: list[SecurityIssue]) -> str:
-    lines = ["<!-- SECURITY-AGENT:START -->"]
-    lines.append("### Security Report")
-    lines.append("")
-    lines.append(f"_Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}_")
-    lines.append("")
-    
-    if not issues:
-        lines.append("✅ No security issues detected")
-    else:
-        critical = [i for i in issues if i.severity == "critical"]
-        high = [i for i in issues if i.severity == "high"]
-        medium = [i for i in issues if i.severity == "medium"]
-        
-        lines.append(f"**Found {len(issues)} issue(s):**")
-        lines.append(f"- 🔴 Critical: {len(critical)}")
-        lines.append(f"- 🟠 High: {len(high)}")
-        lines.append(f"- 🟡 Medium: {len(medium)}")
-        lines.append("")
-        
-        for issue in issues:
-            severity_icon = "🔴" if issue.severity == "critical" else "🟠" if issue.severity == "high" else "🟡"
-            lines.append(f"{severity_icon} **{issue.category}**")
-            lines.append(f"   - {issue.description}")
-            lines.append(f"   - Location: `{issue.location}`")
-            if issue.fix:
-                lines.append(f"   - Fix: {issue.fix}")
-            if issue.cve_id:
-                lines.append(f"   - CVE: {issue.cve_id}")
-            lines.append("")
-    
-    lines.append("<!-- SECURITY-AGENT:END -->")
-    return "\n".join(lines)
-
-
-def update_readme(report: str):
-    readme = Path("README.md")
-    if not readme.exists():
-        return
-    
-    content = readme.read_text()
-    pattern = r"<!-- SECURITY-AGENT:START -->.*?<!-- SECURITY-AGENT:END -->"
-    
-    if re.search(pattern, content, re.DOTALL):
-        content = re.sub(pattern, report, content, flags=re.DOTALL)
-    else:
-        content = content.rstrip() + "\n\n" + report
-    
-    readme.write_text(content)
 
 
 def run_scan(fix: bool = False) -> list[SecurityIssue]:
@@ -304,9 +239,6 @@ def run_scan(fix: bool = False) -> list[SecurityIssue]:
         for issue in all_issues:
             if apply_fix(issue):
                 print(f"  Fixed: {issue.category} in {issue.location}")
-    
-    report = generate_report(all_issues)
-    update_readme(report)
     
     return all_issues
 
