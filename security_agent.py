@@ -182,24 +182,41 @@ def research_issue(issue: SecurityIssue) -> list[str]:
         refs.append(f"https://nvd.nist.gov/vuln/detail/{issue.cve_id}")
     
     search_queries = {
-        "vulnerable_dependency": f"latest CVE {issue.description.split()[1] if len(issue.description.split()) > 1 else 'vulnerability'} 2025 2026",
-        "sql_injection": "SQL injection vulnerability best practices prevention 2025",
-        "xss": "XSS attack prevention cross-site scripting latest 2025",
-        "eval_usage": "eval exec security vulnerabilities code injection",
-        "path_traversal": "path traversal vulnerability prevention file inclusion",
-        "hardcoded_db": "database credentials security best practices environment variables",
-        "insecure_random": "insecure random python security cryptographic randomness",
-        "yaml_load": "yaml deserialization vulnerability safe loading python",
-        "weak_crypto": "weak cryptographic algorithms MD5 SHA1 security upgrade",
-        "secret_leak": "secret scanning API keys leak prevention best practices",
+        "vulnerable_dependency": f"CVE {issue.description.split()[1] if len(issue.description.split()) > 1 else ''} 2025 2026 vulnerability",
+        "sql_injection": "SQL injection vulnerability CVE 2025 2026",
+        "xss": "XSS cross-site scripting CVE 2025 2026",
+        "eval_usage": "eval code injection CVE vulnerability",
+        "path_traversal": "path traversal CVE 2025 2026",
+        "hardcoded_db": "database credential leak security 2025",
+        "insecure_random": "insecure random CVE cryptographic 2025",
+        "yaml_load": "yaml deserialization CVE 2025 2026",
+        "weak_crypto": "MD5 SHA1 weakness CVE 2025 2026",
+        "secret_leak": "API key leak security incident 2025",
     }
     
     category = issue.category
     if category in search_queries:
-        query = search_queries[category]
-        result = run_command(f'curl -s "https://duckduckgo.com/?q={query}&format=json" 2>/dev/null | head -c 500 || echo ""')
-        if result and len(result) > 50:
-            pass
+        query = search_queries[category].replace(" ", "+")
+        result = run_command(f'curl -s "https://duckduckgo.com/html/?q={query}" 2>/dev/null | grep -oE "CVE-[0-9]{{4}}-[0-9]+" | head -3 || echo ""')
+        
+        if result:
+            cves = [c.strip() for c in result.split("\n") if c.strip()]
+            if cves:
+                print(f"  📡 Found CVEs for {category}: {', '.join(cves[:2])}")
+                if issue.severity == "medium":
+                    issue.severity = "high"
+                issue.cve_id = cves[0]
+                for cve in cves:
+                    refs.append(f"https://nvd.nist.gov/vuln/detail/{cve}")
+                
+                if "injection" in category or "xss" in category:
+                    issue.fix = "Use parameterized queries + input validation + output encoding"
+                elif "yaml" in category:
+                    issue.fix = "Use yaml.safe_load with SafeLoader + version check"
+                elif "crypto" in category:
+                    issue.fix = "Use hashlib.sha3_256 or hashlib.blake2b"
+                elif "random" in category:
+                    issue.fix = "Use secrets.token_bytes(32) for cryptographic randomness"
     
     if "injection" in issue.category:
         refs.append("https://owasp.org/www-community/attacks/SQL_Injection")
@@ -216,6 +233,7 @@ def research_issue(issue: SecurityIssue) -> list[str]:
     if "crypto" in issue.category:
         refs.append("https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html")
     
+    issue.references = refs
     return refs
 
 
@@ -266,9 +284,10 @@ def apply_fix(issue: SecurityIssue) -> bool:
                                'postgresql://${DB_USER}:${DB_PASSWORD}@', content)
             
             elif issue.description == "Potential insecure random in code":
-                content = content.replace("random.random", "random.getrandbits")
+                if "secrets" not in content:
+                    content = "import secrets\n" + content
+                content = content.replace("random.random", "secrets.randbelow(2**32)")
                 content = content.replace("random.randint", "secrets.randbelow")
-                content = "import secrets\n" + content if "import secrets" not in content else content
             
             elif issue.description == "Potential yaml load in code":
                 content = content.replace("yaml.load(", "yaml.safe_load(")
@@ -276,8 +295,10 @@ def apply_fix(issue: SecurityIssue) -> bool:
                 content = content.replace("Loader=yaml.FullLoader", "Loader=yaml.SafeLoader")
             
             elif issue.description == "Potential weak crypto in code":
-                content = content.replace("md5(", "hashlib.sha256(")
-                content = content.replace("sha1(", "hashlib.sha256(")
+                content = content.replace("md5(", "hashlib.sha3_256(")
+                content = content.replace("sha1(", "hashlib.sha3_256(")
+                if "import hashlib" not in content:
+                    content = "import hashlib\n" + content
             
             path.write_text(content)
             return True
