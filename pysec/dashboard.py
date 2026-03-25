@@ -2,6 +2,7 @@ from flask import Flask, render_template_string, jsonify
 from pathlib import Path
 from datetime import datetime
 import json
+import os
 
 
 app = Flask(__name__)
@@ -132,4 +133,5 @@ def api_results():
 
 if __name__ == "__main__":
     RESULTS_DIR.mkdir(exist_ok=True)
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    debug_mode = os.environ.get("DEBUG", "false").lower() == "true"
+    app.run(host="0.0.0.0", port=5000, debug=debug_mode)
