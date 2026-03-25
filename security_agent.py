@@ -181,12 +181,40 @@ def research_issue(issue: SecurityIssue) -> list[str]:
     if issue.cve_id:
         refs.append(f"https://nvd.nist.gov/vuln/detail/{issue.cve_id}")
     
+    search_queries = {
+        "vulnerable_dependency": f"latest CVE {issue.description.split()[1] if len(issue.description.split()) > 1 else 'vulnerability'} 2025 2026",
+        "sql_injection": "SQL injection vulnerability best practices prevention 2025",
+        "xss": "XSS attack prevention cross-site scripting latest 2025",
+        "eval_usage": "eval exec security vulnerabilities code injection",
+        "path_traversal": "path traversal vulnerability prevention file inclusion",
+        "hardcoded_db": "database credentials security best practices environment variables",
+        "insecure_random": "insecure random python security cryptographic randomness",
+        "yaml_load": "yaml deserialization vulnerability safe loading python",
+        "weak_crypto": "weak cryptographic algorithms MD5 SHA1 security upgrade",
+        "secret_leak": "secret scanning API keys leak prevention best practices",
+    }
+    
+    category = issue.category
+    if category in search_queries:
+        query = search_queries[category]
+        result = run_command(f'curl -s "https://duckduckgo.com/?q={query}&format=json" 2>/dev/null | head -c 500 || echo ""')
+        if result and len(result) > 50:
+            pass
+    
     if "injection" in issue.category:
         refs.append("https://owasp.org/www-community/attacks/SQL_Injection")
     if "xss" in issue.category:
         refs.append("https://owasp.org/www-community/attacks/xss")
     if "secret" in issue.category:
         refs.append("https://docs.github.com/en/code-security/secret-scanning")
+    if "eval" in issue.category:
+        refs.append("https://cheatsheetseries.owasp.org/cheatsheets/Code_Injection_Cheat_Sheet.html")
+    if "path_traversal" in issue.category:
+        refs.append("https://owasp.org/www-community/attacks/Path_Traversal")
+    if "yaml" in issue.category:
+        refs.append("https://security.googleblog.com/2022/02/avoiding-security-pitfalls-in-yaml.html")
+    if "crypto" in issue.category:
+        refs.append("https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html")
     
     return refs
 
