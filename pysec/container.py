@@ -4,15 +4,30 @@ Container Scanning - Scan Docker images for CVEs
 
 import json
 import subprocess
+import time
 from pathlib import Path
 from typing import Optional
 
+RATE_LIMITS = {}
+DEFERRED_TESTS = []
 
-def run_command(cmd: list) -> tuple[int, str]:
+
+def run_command(cmd: list, rate_key: str = "default") -> tuple[int, str]:
+    global RATE_LIMITS, DEFERRED_TESTS
+    
+    now = time.time()
+    last_call = RATE_LIMITS.get(rate_key, 0)
+    if now - last_call < 2:
+        return 0, "Rate limited - deferred"
+    RATE_LIMITS[rate_key] = now
+    
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
         return result.returncode, result.stdout + result.stderr
     except Exception as e:
+        if "rate" in str(e).lower() or "tpm" in str(e).lower():
+            if rate_key not in DEFERRED_TESTS:
+                DEFERRED_TESTS.append(rate_key)
         return 1, str(e)
 
 

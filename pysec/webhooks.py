@@ -4,8 +4,19 @@ Notification Webhooks - Send alerts to Slack, Teams, Discord, etc.
 
 import json
 import subprocess
-from typing import Optional
 from pathlib import Path
+
+WEBHOOK_RATE_LIMIT = 60
+WEBHOOK_LAST_CALL = {}
+
+
+def send_webhook(webhook_url: str, message: str, **kwargs):
+    import time
+    now = time.time()
+    last_call = WEBHOOK_LAST_CALL.get(webhook_url, 0)
+    if now - last_call < WEBHOOK_RATE_LIMIT:
+        return {"status": "skipped", "reason": "rate limited"}
+    WEBHOOK_LAST_CALL[webhook_url] = now
 
 
 def send_slack(webhook_url: str, message: str, severity: str = "info") -> bool:

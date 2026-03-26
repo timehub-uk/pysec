@@ -36,9 +36,26 @@ CONFIG_VULNERABILITIES = {
 }
 
 
-def scan_config_files(path):
+def scan_config_files(path, skip_example=False, ignore_patterns=None):
     results = []
     seen = set()
+    
+    if ignore_patterns is None:
+        ignore_patterns = []
+    
+    import fnmatch
+    def check_ignore(filepath_str, patterns):
+        for pattern in patterns:
+            if pattern in filepath_str:
+                return True
+            if pattern.endswith("/") and pattern.rstrip("/") in filepath_str:
+                return True
+            if "*" in pattern:
+                if fnmatch.fnmatch(filepath_str, pattern):
+                    return True
+        return False
+    
+    example_patterns = ('/example', '/demo', '/doc', '/docs/', '/sample', '/sample_')
     
     config_files = [
         "*.env",
@@ -57,6 +74,12 @@ def scan_config_files(path):
     for ext in config_extensions:
         for filepath in path.rglob(f"*{ext}"):
             if any(skip in str(filepath) for skip in [".git", "venv", ".venv", "node_modules"]):
+                continue
+            
+            if skip_example and any(p in str(filepath) for p in example_patterns):
+                continue
+            
+            if check_ignore(str(filepath), ignore_patterns):
                 continue
             
             try:

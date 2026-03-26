@@ -105,9 +105,27 @@ def should_ignore(filepath):
     return False
 
 
-def scan_secrets(path):
+def scan_secrets(path, skip_test=False, skip_example=False, ignore_patterns=None):
     results = []
     seen = set()
+    
+    if ignore_patterns is None:
+        ignore_patterns = []
+    
+    import fnmatch
+    def check_ignore(filepath_str, patterns):
+        for pattern in patterns:
+            if pattern in filepath_str:
+                return True
+            if pattern.endswith("/") and pattern.rstrip("/") in filepath_str:
+                return True
+            if "*" in pattern:
+                if fnmatch.fnmatch(filepath_str, pattern):
+                    return True
+        return False
+    
+    test_patterns = ('test_', '_test.py', '/tests/', '/test_', 'conftest.py')
+    example_patterns = ('/example', '/demo', '/doc', '/docs/', '/sample', '/sample_')
     
     extensions = {".py", ".js", ".ts", ".json", ".yaml", ".yml", ".env", ".sh", ".txt", ".conf", ".config"}
     
@@ -116,7 +134,13 @@ def scan_secrets(path):
             if any(skip in str(filepath) for skip in ["node_modules", ".git", "__pycache__", "venv", ".venv"]):
                 continue
             
-            if should_ignore(filepath):
+            if skip_test and any(p in str(filepath) for p in test_patterns):
+                continue
+            
+            if skip_example and any(p in str(filepath) for p in example_patterns):
+                continue
+            
+            if check_ignore(str(filepath), ignore_patterns):
                 continue
             
             try:

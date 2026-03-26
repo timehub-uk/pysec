@@ -10,7 +10,7 @@ from typing import Optional
 
 JS_PATTERNS = {
     "hardcoded_secret": {
-        "pattern": r"(apiKey|api_secret|apikey|secret|token|password)\s*[:=]\s*['\"][a-zA-Z0-9]{20,}['\"]",
+        "pattern": r"(const|let|var)?\s*(apiKey|api_secret|apikey|secret|token|password)\s*[:=]\s*['\"][a-zA-Z0-9_-]{20,}['\"]",
         "severity": "high",
         "description": "Hardcoded secret in JavaScript"
     },
@@ -275,13 +275,5 @@ def scan_multilang(path: Path = Path(".")) -> list[dict]:
     results.extend(scan_rust(path))
     results.extend(scan_java(path))
     results.extend(scan_csharp(path))
-    
-    if not results:
-        results.append({
-            "type": "multilang",
-            "severity": "info",
-            "description": "No issues found in JS/TS/Go/Rust/Java/C#",
-            "location": str(path)
-        })
     
     return results

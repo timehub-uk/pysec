@@ -1,0 +1,35 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      - name: Install pysec
+        run: |
+          pip install -e .
+      
+      - name: Run security scan
+        run: |
+          pysec scan . --skip-test --skip-example
+      
+      - name: Run CVE check
+        run: |
+          pysec scan . --cve
+      
+      - name: Run full scan
+        run: |
+          pysec scan . --full --skip-test

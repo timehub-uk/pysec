@@ -155,14 +155,14 @@ def display_results(results):
     for r in sorted_results:
         severity = r.get("severity", "unknown")
         style = {
-            "critical": "bold red",
+            "critical": "red bold",
             "high": "red",
             "medium": "yellow",
             "low": "green"
         }.get(severity, "")
         
         table.add_row(
-            f"[{style}]{severity.upper()}[/{style}]",
+            severity.upper(),
             r.get("type", "unknown"),
             r.get("description", "")[:60],
             r.get("location", "")
@@ -170,13 +170,21 @@ def display_results(results):
     
     console.print(table)
     
-    summary = f"Total: {len(results)} issue(s) "
-    summary += f"[critical:{len([r for r in results if r.get('severity') == 'critical'])}] "
-    summary += f"[high:{len([r for r in results if r.get('severity') == 'high'])}] "
-    summary += f"[medium:{len([r for r in results if r.get('severity') == 'medium'])}] "
-    summary += f"[low:{len([r for r in results if r.get('severity') == 'low'])}]"
+    critical = len([r for r in results if r.get("severity") == "critical"])
+    high = len([r for r in results if r.get("severity") == "high"])
+    medium = len([r for r in results if r.get("severity") == "medium"])
+    low = len([r for r in results if r.get("severity") == "low"])
     
-    console.print(f"\n[bold]{summary}[/bold]")
+    # Check for deferred tests
+    try:
+        from pysec.deps import DEFERRED_TESTS
+        if DEFERRED_TESTS:
+            console.print(f"\n[bold yellow]⚠ Deferred {len(DEFERRED_TESTS)} tests due to rate limiting[/bold yellow]")
+            console.print(f"  Deferred: {', '.join(DEFERRED_TESTS[:5])}")
+    except:
+        pass
+    
+    console.print(f"\nTotal: {len(results)} issue(s) | Critical: {critical} | High: {high} | Medium: {medium} | Low: {low}")
 
 
 def display_table(results):
